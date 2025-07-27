@@ -1,4 +1,4 @@
-id_bytes = b'@'
+id_bytes = b':'
 
 
 decimal_id = int.from_bytes(id_bytes, 'little')
