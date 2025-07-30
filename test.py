@@ -168,9 +168,26 @@ def format_output(data: dict, indent: int = 0) -> str:
 # --- Main Execution ---
 byte_data = bytearray(b'"\x826\x17\x01\x05event\x02\x02ID"\x826\x17\x02\x04Type\x8aSpinAndWin\x02\x04Time\x07`45}`\xc1\x00\x00\x02\x06Number\x8589304\x02\x08Duration\x14\x02\tHasLevels\x01\x01\x06Market\x01\x03Win\x02\x04Odds\x8236\x00\x01\x03Red\x0c\x812\x00\x01\x05Black\x0c\x812\x00\x01\x05Green\x0c\x8236\x00\x01\x06Dozens\x0c\x813\x00\x01\x07OddEven\x0c\x812\x00\x01\x04HiLo\x0c\x812\x00\x01\x05Split\x0c\x8218\x00\x01\tThreeLine\x0c\x8212\x00\x01\x06Corner\x0c\x819\x00\x01\x0fFirst4Connected\x0c\x819\x00\x01\x07SixLine\x0c\x816\x00\x01\x06Column\x0c\x813\x00\x01\nNeighbours\x0c\x817\x00\x01\x06Sector\x0c\x816\x00\x00\x00')
 
-# Due to the unusual start of the bytearray, we find the first object marker
-# to begin parsing. `b'\x01\x05event...'`
-start_pos = byte_data.find(b'\x01\x05event')
+# Automatically detect the first valid object marker (0x01) and name length
+
+def find_first_object_start(data):
+    for i in range(len(data) - 2):
+        if data[i] == 0x01:
+            name_len = data[i+1]
+            # Check that name_len is reasonable and the name is ASCII
+            if 1 <= name_len <= 32:
+                name_bytes = data[i+2:i+2+name_len]
+                try:
+                    name = name_bytes.decode('ascii', 'ignore')
+                    if name.isprintable():
+                        return i
+                except Exception:
+                    continue
+    return -1
+
+start_pos = find_first_object_start(byte_data)
+if start_pos == -1:
+    raise ValueError("No valid object marker found in bytearray")
 
 # Instantiate the parser and run it
 parser = DynamicParser(byte_data[start_pos:])
